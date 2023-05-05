@@ -2854,14 +2854,14 @@
       },
       {
         "id": "fe6ccba2-7bef-47db-8ca7-32b916dcdd8a",
-        "clientId": "hello_world_client",
-        "name": "Public Client",
-        "description": "Public Client SoF client app",
+        "clientId": "fhir_oauth2_proxy",
+        "name": "FHIR proxy",
+        "description": "FHIR server authenticated access",
         "surrogateAuthRequired": false,
         "enabled": true,
         "alwaysDisplayInConsole": false,
         "clientAuthenticatorType": "client-secret",
-        "secret": "${__KEYCLOAK_FEMR_REALM_PUBCLIENT_OPENID_CLIENT_SECRET}",
+        "secret": "${__KEYCLOAK_FEMR_REALM_FHIR_PROXY_OPENID_CLIENT_SECRET}",
         "redirectUris": [
           "*"
         ],
@@ -2899,135 +2899,6 @@
           "backchannel.logout.revoke.offline.tokens": "false",
           "tls.client.certificate.bound.access.tokens": "false",
           "require.pushed.authorization.requests": "false",
-          "saml.authnstatement": "false",
-          "display.on.consent.screen": "false",
-          "saml.onetimeuse.condition": "false"
-        },
-        "authenticationFlowBindingOverrides": {},
-        "fullScopeAllowed": true,
-        "nodeReRegistrationTimeout": -1,
-        "defaultClientScopes": [
-          "patient/*.read",
-          "launch",
-          "web-origins",
-          "roles",
-          "profile",
-          "email"
-        ],
-        "optionalClientScopes": [
-          "address",
-          "phone",
-          "offline_access",
-          "microprofile-jwt"
-        ]
-      },
-      {
-        "id": "442354b5-a98c-4938-b62f-6333dc82435b",
-        "clientId": "screener_openid_client",
-        "name": "Public Vue Client",
-        "description": "Public Client SoF Vue client app",
-        "surrogateAuthRequired": false,
-        "enabled": true,
-        "alwaysDisplayInConsole": false,
-        "clientAuthenticatorType": "client-secret",
-        "secret": "${__KEYCLOAK_FEMR_REALM_VUECLIENT_OPENID_CLIENT_SECRET}",
-        "redirectUris": [
-          "*"
-        ],
-        "webOrigins": [
-          "*"
-        ],
-        "notBefore": 0,
-        "bearerOnly": false,
-        "consentRequired": false,
-        "standardFlowEnabled": true,
-        "implicitFlowEnabled": false,
-        "directAccessGrantsEnabled": true,
-        "serviceAccountsEnabled": false,
-        "publicClient": true,
-        "frontchannelLogout": false,
-        "protocol": "openid-connect",
-        "attributes": {
-          "saml.assertion.signature": "false",
-          "id.token.as.detached.signature": "false",
-          "saml.force.post.binding": "false",
-          "saml.multivalued.roles": "false",
-          "saml.encrypt": "false",
-          "login_theme": "base",
-          "oauth2.device.authorization.grant.enabled": "false",
-          "saml.server.signature": "false",
-          "saml.server.signature.keyinfo.ext": "false",
-          "use.refresh.tokens": "true",
-          "exclude.session.state.from.auth.response": "false",
-          "oidc.ciba.grant.enabled": "false",
-          "saml.artifact.binding": "false",
-          "backchannel.logout.session.required": "false",
-          "client_credentials.use_refresh_token": "false",
-          "saml_force_name_id_format": "false",
-          "saml.client.signature": "false",
-          "backchannel.logout.revoke.offline.tokens": "false",
-          "tls.client.certificate.bound.access.tokens": "false",
-          "require.pushed.authorization.requests": "false",
-          "saml.authnstatement": "false",
-          "display.on.consent.screen": "false",
-          "saml.onetimeuse.condition": "false"
-        },
-        "authenticationFlowBindingOverrides": {},
-        "fullScopeAllowed": true,
-        "nodeReRegistrationTimeout": -1,
-        "defaultClientScopes": [
-          "patient/*.read",
-          "launch",
-          "web-origins",
-          "roles",
-          "profile",
-          "email"
-        ],
-        "optionalClientScopes": [
-          "address",
-          "phone",
-          "offline_access",
-          "microprofile-jwt"
-        ]
-      },
-      {
-        "id": "6c565c77-6bbd-4c5f-b8d0-b271dd9b8e0b",
-        "clientId": "confidentialbackend_openid_client",
-        "name": "ConfidentialBackend",
-        "description": "Confidential Backend SoF client app",
-        "surrogateAuthRequired": false,
-        "enabled": true,
-        "alwaysDisplayInConsole": false,
-        "clientAuthenticatorType": "client-secret",
-        "secret": "${__KEYCLOAK_FEMR_REALM_CONFIDENTIALBACKEND_OPENID_CLIENT_SECRET}",
-        "redirectUris": [
-          "*"
-        ],
-        "webOrigins": [
-          "*"
-        ],
-        "notBefore": 0,
-        "bearerOnly": false,
-        "consentRequired": false,
-        "standardFlowEnabled": true,
-        "implicitFlowEnabled": false,
-        "directAccessGrantsEnabled": true,
-        "serviceAccountsEnabled": false,
-        "publicClient": false,
-        "frontchannelLogout": false,
-        "protocol": "openid-connect",
-        "attributes": {
-          "saml.assertion.signature": "false",
-          "saml.force.post.binding": "false",
-          "saml.multivalued.roles": "false",
-          "saml.encrypt": "false",
-          "login_theme": "base",
-          "saml.server.signature": "false",
-          "saml.server.signature.keyinfo.ext": "false",
-          "exclude.session.state.from.auth.response": "false",
-          "saml_force_name_id_format": "false",
-          "saml.client.signature": "false",
-          "tls.client.certificate.bound.access.tokens": "false",
           "saml.authnstatement": "false",
           "display.on.consent.screen": "false",
           "saml.onetimeuse.condition": "false"
@@ -3114,63 +2985,6 @@
             }
           }
         ],
-        "defaultClientScopes": [
-          "web-origins",
-          "roles",
-          "profile",
-          "email"
-        ],
-        "optionalClientScopes": [
-          "address",
-          "phone",
-          "offline_access",
-          "microprofile-jwt"
-        ]
-      },
-      {
-        "id": "323133ff-bbb9-49d4-910b-df8b464de715",
-        "clientId": "logserver_openid_client",
-        "name": "Logserver",
-        "description": "Logserver",
-        "surrogateAuthRequired": false,
-        "enabled": true,
-        "alwaysDisplayInConsole": false,
-        "clientAuthenticatorType": "client-secret",
-        "secret": "${__KEYCLOAK_FEMR_REALM_LOGSERVER_OPENID_CLIENT_SECRET}",
-        "redirectUris": [
-          "*"
-        ],
-        "webOrigins": [
-          "*"
-        ],
-        "notBefore": 0,
-        "bearerOnly": false,
-        "consentRequired": false,
-        "standardFlowEnabled": true,
-        "implicitFlowEnabled": false,
-        "directAccessGrantsEnabled": true,
-        "serviceAccountsEnabled": false,
-        "publicClient": false,
-        "frontchannelLogout": false,
-        "protocol": "openid-connect",
-        "attributes": {
-          "saml.assertion.signature": "false",
-          "saml.force.post.binding": "false",
-          "saml.multivalued.roles": "false",
-          "saml.encrypt": "false",
-          "saml.server.signature": "false",
-          "saml.server.signature.keyinfo.ext": "false",
-          "exclude.session.state.from.auth.response": "false",
-          "saml_force_name_id_format": "false",
-          "saml.client.signature": "false",
-          "tls.client.certificate.bound.access.tokens": "false",
-          "saml.authnstatement": "false",
-          "display.on.consent.screen": "false",
-          "saml.onetimeuse.condition": "false"
-        },
-        "authenticationFlowBindingOverrides": {},
-        "fullScopeAllowed": true,
-        "nodeReRegistrationTimeout": -1,
         "defaultClientScopes": [
           "web-origins",
           "roles",
