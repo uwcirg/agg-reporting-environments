@@ -24,13 +24,21 @@ services:
       spring.jpa.hibernate.dialect: org.hibernate.dialect.PostgreSQL94Dialect
 
       hapi.fhir.server_address: https://fhir.${BASE_DOMAIN:-localtest.me}/fhir/
-    # expose HAPI to internet - remove entire `labels` section if unwanted
     labels:
       - "traefik.enable=true"
+
+      # unauthenticated access
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.rule=Host(`fhir.${BASE_DOMAIN:-localtest.me}`)"
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.tls=true"
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt"
+
+      # authenticated access
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.rule=Host(`fhir-secure.${BASE_DOMAIN:-localtest.me}`)
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.middlewares=oidc-auth-${COMPOSE_PROJECT_NAME}
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.entrypoints=websecure
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.tls=true
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt
     volumes:
       - "./config/hapi/application.yaml:/opt/application.yaml:ro"
     depends_on:
@@ -40,6 +48,126 @@ services:
       internal:
         aliases:
           - fhir-internal
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_IMAGE_TAG:-15.0.2}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak-${COMPOSE_PROJECT_NAME}.rule=Host(`keycloak.${BASE_DOMAIN:-localtest.me}`)"
+      - "traefik.http.routers.keycloak-${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.keycloak-${COMPOSE_PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.keycloak-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt"
+    entrypoint:
+      # override default keycloak docker entrypoint script with our own
+      - /opt/jboss/tools/docker-entrypoint-override.sh
+      - /opt/jboss/tools/docker-entrypoint.sh
+    command:
+      - "-b"
+      - "0.0.0.0"
+      - "-Dkeycloak.migration.action=import"
+      # TODO use dir migration provider (`keycloak.migration.provider=dir`)
+      # https://github.com/keycloak/keycloak-documentation/blob/master/server_admin/topics/export-import.adoc
+      - "-Dkeycloak.migration.provider=singleFile"
+      - "-Dkeycloak.profile.feature.upload_scripts=enabled"
+      - "-Dkeycloak.migration.file=/opt/jboss/keycloak/realm-data.json"
+      - "-Dkeycloak.migration.strategy=IGNORE_EXISTING"
+    environment:
+      KEYCLOAK_FRONTEND_URL: "https://keycloak.${BASE_DOMAIN:-localtest.me}/auth"
+      PROXY_ADDRESS_FORWARDING: "true"
+      DB_VENDOR: postgres
+      DB_ADDR: db
+      DB_PORT: 5432
+      DB_DATABASE: keycloak
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # https://nvd.nist.gov/vuln/detail/CVE-2021-44228
+      LOG4J_FORMAT_MSG_NO_LOOKUPS: "true"
+
+      # environment variables used to configure docker-entrypoint-override.sh
+      __KEYCLOAK_INPUT_CONFIG: /tmp/realm-data.json
+      __KEYCLOAK_OUTPUT_CONFIG: /opt/jboss/keycloak/realm-data.json
+    env_file:
+      - keycloak.env
+    volumes:
+      - "./config/keycloak/docker-entrypoint-override.sh:/opt/jboss/tools/docker-entrypoint-override.sh:ro"
+      - "./config/keycloak/realm-data.json:/tmp/realm-data.json"
+      - "./config/keycloak/jboss-logging-config.cli:/opt/jboss/startup-scripts/jboss-logging-config.cli"
+    depends_on:
+      - db
+    networks:
+      - ingress
+      - internal
+
+####
+  auth-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.3.0
+    environment:
+      # service settings
+      OAUTH2_PROXY_HTTP_ADDRESS: 0.0.0.0:4180
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_SET_AUTHORIZATION_HEADER: "true"
+      OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER: "true"
+      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      OAUTH2_PROXY_PASS_ACCESS_TOKEN: "true"
+      # allow validation of JWTs in Authorization HTTP header
+      # https://medium.com/in-the-weeds/service-to-service-authentication-on-kubernetes-94dcb8216cdc#20d0
+      OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS: "true"
+
+      # when authenticated, return a static 202 response
+      # https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview/#forwardauth-with-static-upstreams-configuration
+      OAUTH2_PROXY_UPSTREAMS: static://202
+
+      # general cookie settings
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_COOKIE_EXPIRE: 30m
+      OAUTH2_PROXY_COOKIE_REFRESH: 1m
+      OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL: "true"
+      # base session cookie on Keycloak username (email not always set in Keycloak)
+      OAUTH2_PROXY_USER_ID_CLAIM: preferred_username
+
+      # OIDC integration settings
+      OAUTH2_PROXY_PROVIDER: oidc
+      OAUTH2_PROXY_CLIENT_ID: fhir_oauth2_proxy
+      OAUTH2_PROXY_SCOPE: openid profile email
+      OAUTH2_PROXY_OIDC_ISSUER_URL: https://keycloak.${BASE_DOMAIN:-localtest.me}/auth/realms/fEMR
+
+      # security settings
+      OAUTH2_PROXY_COOKIE_DOMAINS: .${BASE_DOMAIN:-localtest.me}
+      OAUTH2_PROXY_WHITELIST_DOMAINS: .${BASE_DOMAIN:-localtest.me}
+    env_file:
+      - auth-proxy.env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.rule=Host(`auth-proxy.${BASE_DOMAIN:-localtest.me}`) || PathPrefix(`/oauth2`)
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.entrypoints=websecure
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.tls=true
+      - traefik.http.routers.auth-proxy-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt
+
+      # oauth2-proxy does not EXPOSE the ports it listens on, requiring explicit traefik configuration
+      - traefik.http.services.auth-proxy-${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=4180
+
+      - traefik.http.middlewares.oidc-auth-${COMPOSE_PROJECT_NAME}.forwardAuth.address=http://auth-proxy-${COMPOSE_PROJECT_NAME}:4180/
+      - traefik.http.middlewares.oidc-auth-${COMPOSE_PROJECT_NAME}.forwardAuth.trustForwardHeader=true
+      - traefik.http.middlewares.oidc-auth-${COMPOSE_PROJECT_NAME}.forwardAuth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Access-Token,Authorization
+    networks:
+      ingress:
+        aliases:
+          - auth-proxy-${COMPOSE_PROJECT_NAME}
+      internal:
+
+  whoami:
+    image: containous/whoami
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami-${COMPOSE_PROJECT_NAME}.rule=Host(`whoami.${BASE_DOMAIN:-localtest.me}`)
+      - traefik.http.routers.whoami-${COMPOSE_PROJECT_NAME}.middlewares=oidc-auth-${COMPOSE_PROJECT_NAME}
+      - traefik.http.routers.whoami-${COMPOSE_PROJECT_NAME}.entrypoints=websecure
+      - traefik.http.routers.whoami-${COMPOSE_PROJECT_NAME}.tls=true
+      - traefik.http.routers.whoami-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt
+    networks:
+      ingress:
+      internal:
 
 volumes:
   db-data: {}
