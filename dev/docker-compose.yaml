@@ -24,13 +24,21 @@ services:
       spring.jpa.hibernate.dialect: org.hibernate.dialect.PostgreSQL94Dialect
 
       hapi.fhir.server_address: https://fhir.${BASE_DOMAIN:-localtest.me}/fhir/
-    # expose HAPI to internet - remove entire `labels` section if unwanted
     labels:
       - "traefik.enable=true"
+
+      # unauthenticated access
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.rule=Host(`fhir.${BASE_DOMAIN:-localtest.me}`)"
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.tls=true"
       - "traefik.http.routers.fhir-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt"
+
+      # authenticated access
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.rule=Host(`fhir-secure.${BASE_DOMAIN:-localtest.me}`)
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.middlewares=oidc-auth-${COMPOSE_PROJECT_NAME}
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.entrypoints=websecure
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.tls=true
+      - traefik.http.routers.fhir-secure-${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt
     volumes:
       - "./config/hapi/application.yaml:/opt/application.yaml:ro"
     depends_on:
