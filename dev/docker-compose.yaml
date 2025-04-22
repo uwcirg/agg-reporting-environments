@@ -22,6 +22,8 @@ services:
       spring.datasource.driverClassName: org.postgresql.Driver
       spring.jpa.properties.hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
 
+      # enable Clinical Reasoning module (CQL)
+      hapi.fhir.cr.enabled: "true"
       hapi.fhir.bulk_export_enabled: "true"
       hapi.fhir.bulk_import_enabled: "true"
       # allow direct assignment of resource IDs in any format
